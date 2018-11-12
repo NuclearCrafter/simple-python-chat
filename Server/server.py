@@ -3,7 +3,7 @@ import threading
 import logger
 import sys
 import time
-from client_data import client_data 
+from client_data import client_manager
 from singleton import singleton
 
 class chat_server(metaclass = singleton):
@@ -13,37 +13,43 @@ class chat_server(metaclass = singleton):
         self.MAX_USERS = 20
         self.socket = socket.socket()
         self.socket.bind((self.HOST,self.PORT))
-        self.client_list = {}
+        self.client_manager = client_manager()
         self.running = True
+
     def terminate(self):
         pass
+
     def listen(self):
         self.socket.listen(self.MAX_USERS)
         while True:
             conn, addr = self.socket.accept()
             conn.settimeout(60)
-            identifier = hash(conn)
             self.logger.log('New connection from '+str(addr))
-            thread = threading.Thread(target = self.listen_to_client,args = (conn,addr,identifier), daemon=True).start()
-            self.client_list[identifier] = client_data(conn,addr,thread)
+            identifier = self.client_manager.add_user(conn,addr)
+            thread = threading.Thread(target = self.listen_to_client, args = (identifier,), daemon=True).start()
+
     def broadcast_to_all(self, data):
-        for identifier in self.client_list:
-            self.logger.log('Sending data to '+str(self.client_list[identifier]._addr))
-            self.client_list[identifier]._conn.send(data)
+        for identifier in self.client_manager:
+            self.logger.log('Sending data to '+str(self.client_manager[identifier]._addr))
+            self.client_manager[identifier]._conn.send(data)
+
     def process_command(self,client,command):
         if command.startswith('/LIST'):
             self.logger.log('LIST command acquired')
-            for identifier in self.client_list:
-                print('ID: '+str(identifier)+', ADDR: '+str(self.client_list[identifier]._addr))
-                data_to_send = 'ID: '+str(identifier)+', ADDR: '+str(self.client_list[identifier]._addr)
+            for identifier in self.client_manager:
+                print('ID: '+str(identifier)+', ADDR: '+str(self.client_manager[identifier]._addr))
+                data_to_send = 'ID: '+str(identifier)+', ADDR: '+str(self.client_manager[identifier]._addr)
                 client.send(data_to_send.encode('UTF-8'))
         elif command.startswith('/TERMINATE'):
             client.send(b'Server termination imminent')
             self.terminate()
         else:
             client.send(b'UNKNOWN COMMAND')
-    def listen_to_client(self, client, address, identifier):
+
+    def listen_to_client(self, identifier):
         size = 1024
+        client = self.client_manager[identifier]._conn
+        address = self.client_manager[identifier]._addr
         while True:
             try:
                 data = client.recv(size)
@@ -56,10 +62,10 @@ class chat_server(metaclass = singleton):
                         self.broadcast_to_all(data)
                 else:
                     raise error('Client disconnected')
-            except:
+            except error:
                 client.close()
                 self.logger.log('Client '+str(address)+' disconnected')
-                del self.client_list[identifier]
+                self.client_manager.remove_user(identifier)
                 return False
 
 server = chat_server()
