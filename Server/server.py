@@ -3,7 +3,7 @@ import threading
 import logger
 import sys
 import time
-from client_data import client_manager
+from client_manager import client_manager
 from user_manager import user_manager
 from singleton import singleton
 
