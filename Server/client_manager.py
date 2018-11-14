@@ -15,6 +15,9 @@ class client_manager():
         del self._client_list[identifier]
     def get_user(self,identifier):
         return self._client_list[identifier]
+    def terminate_all_connections(self):
+        for identifier in self._client_list:
+            self._client_list[identifier]._conn.close()
     def __getitem__(self, position):
         return self.get_user(position)
     def __iter__(self):

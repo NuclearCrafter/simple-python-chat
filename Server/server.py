@@ -8,6 +8,7 @@ from user_manager import user_manager
 from singleton import singleton
 
 class chat_server(metaclass = singleton):
+
     def __init__(self):
         self.logger = logger.logger()
         self.HOST, self.PORT = "localhost", 9999
@@ -17,18 +18,41 @@ class chat_server(metaclass = singleton):
         self.client_manager = client_manager()
         self.user_manager =user_manager()
         self.running = True
+        self.termination_in_progress = False
+        self.listen_thread = 0 
+        self.wathcdog_thread = threading.Thread(target = self.watchdog_function, args = (), daemon=True).start()
 
-    def terminate(self):
-        pass
+    def watchdog_function(self):
+        while True:
+            if self.termination_in_progress:
+                self.terminate_chat_server()
+                break;
+            time.sleep(1)
 
-    def listen(self):
+    def terminate_chat_server(self):
+        self.client_manager.terminate_all_connections()
+        self.socket.close()
+        self.logger.log('Connection termination complete')
+
+    def listen_thread_function(self):
         self.socket.listen(self.MAX_USERS)
         while True:
-            conn, addr = self.socket.accept()
-            conn.settimeout(60)
-            self.logger.log('New connection from '+str(addr))
-            identifier = self.client_manager.add_user(conn,addr)
-            thread = threading.Thread(target = self.listen_to_client, args = (identifier,), daemon=True).start()
+            try:
+                conn, addr = self.socket.accept()
+                conn.settimeout(60)
+                self.logger.log('New connection from '+str(addr))
+                identifier = self.client_manager.add_user(conn,addr)
+                thread = threading.Thread(target = self.listen_to_client, args = (identifier,), daemon=True).start()
+            except:
+                self.logger.log('Listen cycle interruption')
+                break     
+
+    def terminate(self):
+        self.logger.log('Terminating sequence initated')
+        self.termination_in_progress = True
+
+    def listen(self):
+        self.listen_thread = threading.Thread(target = self.listen_thread_function(), args = (), daemon=True).start()
 
     def broadcast_to_all(self, data):
         for identifier in self.client_manager:
@@ -67,10 +91,11 @@ class chat_server(metaclass = singleton):
                         self.broadcast_to_all(data)
                 else:
                     raise error('Client disconnected')
-            except error:
+            except:
                 client.close()
                 self.logger.log('Client '+str(address)+' disconnected')
-                self.client_manager.remove_user(identifier)
+                if not self.termination_in_progress:
+                    self.client_manager.remove_user(identifier)
                 return False
     def login_client(self,identifier):
         size = 1024
