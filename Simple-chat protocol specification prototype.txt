@@ -1,0 +1,53 @@
+Simple-chat protocol description
+
+Frame format
+#HEADER:VAR1,VAR2,...,VARN:MESSAGE
+
+HEADER TYPES:
+	MSG
+	LGN
+
+Client ---> server
+
+	LGN vars:
+		VAR1 - data type (login, password,status)
+		VAR2 - data (login, password)
+
+	MSG vars:
+		VAR1 - message type (private, broadcast, group)
+		CASE TYPE:
+			broadcast:
+				VARS empty
+			private:
+				VAR1 - receivier
+			group:
+				VAR1 - groupname
+
+Server --> client
+
+	LGN vars:
+		VAR1 - data type (login, password, salt, status)
+		VAR2 - data (login, password, salt, status)
+			statuses:
+				online
+				offline
+
+	MSG vars:
+		VAR1 - message type (private, broadcast, group)
+		CASE TYPE:
+			broadcast:
+				VARS empty
+			private:
+				VAR1 - sender
+			group:
+				VAR1 - groupname
+
+Login procedure
+
+Client - LGN:status:
+Client - LGN:status:offline
+Client - LGN:login,login_val
+Server - LGN:salt:salt_val
+Client - LGN:password:pass_val
+Server - LGN:status:online
+
