@@ -18,9 +18,12 @@ class client:
             received = str(self._sock.recv(1024), "utf-8")
             self.process_server_responce(received)
     def process_server_responce(self, received):
-        telegram_received = self._parser.parse_telegram(received)
-        if telegram_received.header == MSG:
-            print("{} > {}".format(telegram_received.arguments[1],telegram_received.message))
+        try:
+            telegram_received = self._parser.parse_telegram(received)
+            if telegram_received.header == MSG:
+                print("{} > {}".format(telegram_received.arguments[1],telegram_received.message))
+        except:
+            print("NO TELGRAM, TEXT:{}".format(received))
     def process_input(self,data):
         telegram_to_send = self._generator.generate_telegram(telegram_types.MSG,data,message_types.broadcast,'Ingvar')
         self._sock.sendall(bytes(telegram_to_send, "utf-8"))
