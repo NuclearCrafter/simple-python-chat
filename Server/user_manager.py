@@ -38,6 +38,7 @@ class user_manager():
     def set_user_password(self,login,password):
         if login in self._user_list:
             self._user_list[login].add_pass(password)
+            self.dump()
     def validate_user(self,login,password):
         user = self._user_list[login]
         if user._has_password:
