@@ -6,6 +6,7 @@ import time
 from client_manager import client_manager
 from user_manager import user_manager
 from singleton import singleton
+from telegram_parser import telegram, telegram_parser
 
 class chat_server(metaclass = singleton):
 
@@ -17,6 +18,7 @@ class chat_server(metaclass = singleton):
         self.socket.bind((self.HOST,self.PORT))
         self.client_manager = client_manager()
         self.user_manager =user_manager()
+        self.parser = telegram_parser()
         self.running = True
         self.termination_in_progress = False
         self.listen_thread = 0 
@@ -83,12 +85,14 @@ class chat_server(metaclass = singleton):
             try:
                 data = client.recv(size)
                 if data:
-                    if data[0]==47:
-                        self.logger.log('Received command from '+str(address))
-                        self.process_command(identifier,data.decode('utf-8'))
-                    else:
-                        self.logger.log('Received data from '+str(address))
-                        self.broadcast_to_all(data)
+                    received_telegram = self.parser.parse_telegram(data.decode('UTF-8'))
+                    if received_telegram.header=='#MSG':
+                        if received_telegram.message[0] == '/':
+                            self.logger.log('Received command from '+str(address))
+                            self.process_command(identifier,data.decode('utf-8'))
+                        else:
+                            self.logger.log('Received message from '+str(address))
+                            self.broadcast_to_all(data)
                 else:
                     raise error('Client disconnected')
             except:
