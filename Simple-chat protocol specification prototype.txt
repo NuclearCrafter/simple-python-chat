@@ -6,12 +6,14 @@ Frame format
 HEADER TYPES:
 	MSG
 	LGN
+	SERVICE
 
 Client ---> server
 
 	LGN vars:
-		VAR1 - data type (login, password,status)
-		VAR2 - data (login, password)
+		VAR1 - data type (credenitals,status)
+		VAR2 - data (login)
+		VAR3 - data (password)
 
 	MSG vars:
 		VAR1 - message type (private, broadcast, group)
@@ -26,8 +28,8 @@ Client ---> server
 Server --> client
 
 	LGN vars:
-		VAR1 - data type (login, password, salt, status)
-		VAR2 - data (login, password, salt, status)
+		VAR1 - data type (login,status)
+		VAR2 - data (login,status)
 			statuses:
 				online
 				offline
@@ -41,13 +43,12 @@ Server --> client
 				VAR1 - sender
 			group:
 				VAR1 - groupname
+	SERVICE:
 
 Login procedure
 
 Client - LGN:status:
-Client - LGN:status:offline
-Client - LGN:login,login_val
-Server - LGN:salt:salt_val
-Client - LGN:password:pass_val
+Server - LGN:status:offline
+Client - LGN:credentials,login,password:
 Server - LGN:status:online
 
