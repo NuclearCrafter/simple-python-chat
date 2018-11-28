@@ -8,7 +8,7 @@ class telegram_parser:
     def parse_telegram(self,text):       
         splitted = text.split(':')
         header = splitted[0]
-        message = splitted[2]
+        message = ''.join(splitted[2:])
         arguments = splitted[1].split(',')
         telegram_received = telegram(header,message,arguments)
         return telegram_received
