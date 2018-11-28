@@ -14,6 +14,7 @@ class client:
         self._parser = telegram_parser()
         self._generator = telegram_generator()
         self._login = login
+        self._override_communication = threading.Lock()
     def check_login(self,login):
         return True
     def initialization_procedure(self):
@@ -26,14 +27,16 @@ class client:
                 break
             else:
                 print('Invalid login, try again')
-
     def listen_to_server_thread(self):
         while True:
             try:
+                self._override_communication.lock()
                 received = str(self._sock.recv(1024), "utf-8")
+                self._override_communication.release()
             except:
                 print('Connection broken')
                 self._connection_online = False
+                self._override_communication.release()
                 break
             self.process_server_responce(received)
     def process_server_responce(self, received):
@@ -46,11 +49,17 @@ class client:
     def process_input(self,data):
         telegram_to_send = self._generator.generate_telegram(telegram_types.MSG,data,message_types.broadcast,'Ingvar')
         self._sock.sendall(bytes(telegram_to_send, "utf-8"))
+    def login_procedure(self):
+        self._override_communication.lock()
+        pass #HERE I STOPPED
+        self._override_communication.release()
     def input_loop(self):
         while True:
             data = input()
             if self._connection_online:
+                self._override_communication.lock()
                 self.process_input(data)
+                self._override_communication.release()
             else:
                 break
     def connect_to_server(self,host,port):
