@@ -64,16 +64,20 @@ class chat_server(metaclass = singleton):
             self.send_data_to_user(identifier,data)
 
     def send_data_to_user(self,identifier,data):
+        if type(data)==str:
+            data = data.encode('UTF-8')
         self.client_manager[identifier]._conn.send(data)
 
     def process_command(self,identifier,command):
         client = self.client_manager[identifier]._conn
+        client_ident = identifier
         if command.startswith('/LIST'):
             self.logger.log('LIST command acquired')
             for identifier in self.client_manager:
                 print('ID: '+str(identifier)+', ADDR: '+str(self.client_manager[identifier]._addr))
-                data_to_send = 'ID: '+str(identifier)+', ADDR: '+str(self.client_manager[identifier]._addr)
-                client.send(data_to_send.encode('UTF-8'))
+                data_to_send = 'Username: '+str(self.client_manager[identifier]._user)+', ADDR: '+str(self.client_manager[identifier]._addr)
+                telegram_data = self.tg_generator.generate_message_string(message_types.server,data_to_send,'LIST')
+                self.send_data_to_user(client_ident,telegram_data)
         elif command.startswith('/TERMINATE'):
             client.send(b'Server termination imminent')
             self.terminate()
@@ -85,12 +89,33 @@ class chat_server(metaclass = singleton):
     def process_telegram(self,identifier,received_telegram,data):
         address = self.client_manager[identifier]._addr
         if received_telegram.header=='#MSG':
-            if received_telegram.message[0] == '/':
-                self.logger.log('Received command from '+str(address))
-                self.process_command(identifier,received_telegram.message)
+            if len(received_telegram.message)>0:
+                if received_telegram.message[0] == '/':
+                    self.logger.log('Received command from '+str(address))
+                    self.process_command(identifier,received_telegram.message)
+                else:
+                    self.logger.log('Received message from '+str(address))
+                    self.process_message(identifier,received_telegram)
+        elif received_telegram.header == '#LGN':
+            self.commence_login(identifier,received_telegram)
+    def commence_login(self,identifier,received_telegram):
+        args = received_telegram.arguments
+        if args[0]=='credentials':
+            username = args[1]
+            password = args[2]
+            if self.user_manager.user_exists(username):
+                if self.user_manager.validate_user(username,password):
+                    self.client_manager[identifier].bind_username(username)
+                    self.send_data_to_user(identifier,self.tg_generator.generate_login_status(True))
             else:
-                self.logger.log('Received message from '+str(address))
-                self.process_message(identifier,received_telegram)
+                self.user_manager.add_user(username)
+                self.send_data_to_user(identifier,'CREATING NEW USER')
+                self.user_manager.set_user_password(username,password)
+                self.client_manager[identifier].bind_username(username)
+                self.send_data_to_user(identifier,self.tg_generator.generate_login_status(True))
+        elif args[0]=='status':
+            status = self.client_manager[identifier]._user == 'GUEST'
+            self.send_data_to_user(identifier,self.tg_generator.generate_login_status(False))
 
     def process_message(self,identifier,received_telegram):
         message_type = received_telegram.arguments[0]
@@ -124,6 +149,8 @@ class chat_server(metaclass = singleton):
                 if not self.termination_in_progress:
                     self.client_manager.remove_user(identifier)
                 return False
+    #DEPRECATED
+    ''' 
     def login_client(self,identifier):
         size = 1024
         socket = self.client_manager[identifier]._conn
@@ -150,7 +177,7 @@ class chat_server(metaclass = singleton):
                 socket.send(b'Login succesful')
             else:
                 return
-
+    '''
 
 server = chat_server()
 server.listen()

@@ -1,6 +1,7 @@
 import random
 import pickle
 import os
+import hashlib
 
 def generate_salt(l):
     ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -16,7 +17,7 @@ class user_data():
         self._logged_in = False
         self._has_password = False
     def add_pass(self, password):
-        self._password = password
+        self._password = str(hashlib.sha256((password+self._salt).encode('UTF-8')))
         self._has_password = True
 
 class user_manager():
