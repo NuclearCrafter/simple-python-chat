@@ -6,6 +6,7 @@ Frame format
 HEADER TYPES:
 	MSG
 	LGN
+	SERVICE
 
 Client ---> server
 
@@ -42,6 +43,7 @@ Server --> client
 				VAR1 - sender
 			group:
 				VAR1 - groupname
+	SERVICE:
 
 Login procedure
 

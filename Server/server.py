@@ -42,6 +42,7 @@ class chat_server(metaclass = singleton):
 
     def listen_thread_function(self):
         self.socket.listen(self.MAX_USERS)
+        self.logger.log('Server is listening at {}:{}'.format(self.HOST,self.PORT))
         while True:
             try:
                 conn, addr = self.socket.accept()
@@ -100,6 +101,7 @@ class chat_server(metaclass = singleton):
                     self.process_message(identifier,received_telegram)
         elif received_telegram.header == '#LGN':
             self.commence_login(identifier,received_telegram)
+            
     def commence_login(self,identifier,received_telegram):
         args = received_telegram.arguments
         if args[0]=='credentials':
@@ -137,6 +139,7 @@ class chat_server(metaclass = singleton):
                 self.send_data_to_user(self.client_manager.get_id_by_username(received_telegram.arguments[1]),data_to_send)
             else:
                 self.send_data_to_user(identifier,'INVALID USER FOR PRIVATE MESSAGING')
+
     def listen_to_client(self, identifier):
         size = 1024
         client = self.client_manager[identifier]._conn
@@ -155,35 +158,6 @@ class chat_server(metaclass = singleton):
                 if not self.termination_in_progress:
                     self.client_manager.remove_user(identifier)
                 return False
-    #DEPRECATED
-    ''' 
-    def login_client(self,identifier):
-        size = 1024
-        socket = self.client_manager[identifier]._conn
-        socket.send(b'Enter login')
-        login = socket.recv(size)
-        if self.user_manager.user_exists(login):
-            salt = self.user_manager[login]._salt
-            socket.send(salt.encode('UTF-8'))
-            password = socket.recv(size)
-            if self.user_manager.validate_user(login,password):
-                self.client_manager[identifier]._user = login
-            else:
-                socket.send(b'Wrong password')
-        else:
-            socket.send(b'User not found. Create new user [Y/N]?')
-            answer = socket.recv(size).decode('UTF-8').upper()
-            if answer=='Y':
-                salt = self.user_manager.add_user(login)
-                socket.send(salt.encode('UTF-8'))
-                socket.send(b'Enter password')
-                password = socket.recv(size)
-                self.user_manager.set_user_password(login,password)
-                self.client_manager[identifier]._user = login
-                socket.send(b'Login succesful')
-            else:
-                return
-    '''
 
 server = chat_server()
 server.listen()

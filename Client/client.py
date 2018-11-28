@@ -45,11 +45,11 @@ class client:
         while True:
             try:
                 received = str(self._sock.recv(1024), 'utf-8')
+                self.process_server_responce(received)
             except:
-                print('Connection broken')
+                print('\nConnection broken')
                 self._connection_online = False
-                break
-            self.process_server_responce(received)
+                break 
 
     def process_server_responce(self, received):
         try:
@@ -67,7 +67,7 @@ class client:
                     print('Login credentials declined')
                     self._visible_login = GUEST
         except:
-            print('NO TELGRAM, TEXT:{}'.format(received))
+            raise
 
     def process_input(self,data):
         if len(data)>0: 
@@ -128,7 +128,7 @@ class client:
     def connect_to_server(self,host,port):
         try:
             self._sock.connect((host, port))
-            print('Connection to server established')
+            print('Connection to server {}:{} established'.format(host, port))
             self._connection_online = True
             threading.Thread(target = self.listen_to_server_thread,args = ()).start()
             self.login_procedure()
