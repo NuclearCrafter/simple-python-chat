@@ -7,6 +7,7 @@ from client_manager import client_manager
 from user_manager import user_manager
 from singleton import singleton
 from telegram_parser import telegram, telegram_parser
+from telegram_generator import telegram_generator, message_types, telegram_types
 
 class chat_server(metaclass = singleton):
 
@@ -19,6 +20,7 @@ class chat_server(metaclass = singleton):
         self.client_manager = client_manager()
         self.user_manager =user_manager()
         self.parser = telegram_parser()
+        self.tg_generator = telegram_generator()
         self.running = True
         self.termination_in_progress = False
         self.listen_thread = 0 
@@ -59,7 +61,10 @@ class chat_server(metaclass = singleton):
     def broadcast_to_all(self, data):
         for identifier in self.client_manager:
             self.logger.log('Sending data to '+str(self.client_manager[identifier]._addr))
-            self.client_manager[identifier]._conn.send(data)
+            self.send_data_to_user(identifier,data)
+
+    def send_data_to_user(self,identifier,data):
+        self.client_manager[identifier]._conn.send(data)
 
     def process_command(self,identifier,command):
         client = self.client_manager[identifier]._conn
@@ -77,6 +82,30 @@ class chat_server(metaclass = singleton):
         else:
             client.send(b'UNKNOWN COMMAND')
 
+    def process_telegram(self,identifier,received_telegram,data):
+        address = self.client_manager[identifier]._addr
+        if received_telegram.header=='#MSG':
+            if received_telegram.message[0] == '/':
+                self.logger.log('Received command from '+str(address))
+                self.process_command(identifier,received_telegram.message)
+            else:
+                self.logger.log('Received message from '+str(address))
+                self.process_message(identifier,received_telegram)
+
+    def process_message(self,identifier,received_telegram):
+        message_type = received_telegram.arguments[0]
+        if message_type == 'broadcast':
+            data_to_send = self.tg_generator.generate_message_string(message_types.broadcast,
+                                                                    received_telegram.message,
+                                                                    self.client_manager[identifier]._user)
+            self.broadcast_to_all(data_to_send.encode('UTF-8'))
+        elif message_type == 'group':
+            pass
+        elif message_type == 'private':
+            data_to_send = self.tg_generator.generate_message_string(message_types.private,
+                                                        received_telegram.message,
+                                                        self.client_manager[identifier]._user)
+            self.send_data_to_user(self.client_manager.get_id_by_username(received_telegram.arguments[1]),data_to_send)
     def listen_to_client(self, identifier):
         size = 1024
         client = self.client_manager[identifier]._conn
@@ -86,16 +115,10 @@ class chat_server(metaclass = singleton):
                 data = client.recv(size)
                 if data:
                     received_telegram = self.parser.parse_telegram(data.decode('UTF-8'))
-                    if received_telegram.header=='#MSG':
-                        if received_telegram.message[0] == '/':
-                            self.logger.log('Received command from '+str(address))
-                            self.process_command(identifier,data.decode('utf-8'))
-                        else:
-                            self.logger.log('Received message from '+str(address))
-                            self.broadcast_to_all(data)
+                    self.process_telegram(identifier,received_telegram,data)
                 else:
                     raise error('Client disconnected')
-            except:
+            except blabla:
                 client.close()
                 self.logger.log('Client '+str(address)+' disconnected')
                 if not self.termination_in_progress:
