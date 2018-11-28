@@ -67,7 +67,6 @@ class client:
                     print('Login credentials declined')
                     self._visible_login = GUEST
         except:
-            raise
             print('NO TELGRAM, TEXT:{}'.format(received))
 
     def process_input(self,data):

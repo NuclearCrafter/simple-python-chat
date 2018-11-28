@@ -9,6 +9,8 @@ from singleton import singleton
 from telegram_parser import telegram, telegram_parser
 from telegram_generator import telegram_generator, message_types, telegram_types
 
+TIMEOUT_TIME = 3600 #seconds
+
 class chat_server(metaclass = singleton):
 
     def __init__(self):
@@ -43,7 +45,7 @@ class chat_server(metaclass = singleton):
         while True:
             try:
                 conn, addr = self.socket.accept()
-                conn.settimeout(60)
+                conn.settimeout(TIMEOUT_TIME)
                 self.logger.log('New connection from '+str(addr))
                 identifier = self.client_manager.add_user(conn,addr)
                 thread = threading.Thread(target = self.listen_to_client, args = (identifier,), daemon=True).start()
@@ -147,7 +149,7 @@ class chat_server(metaclass = singleton):
                     self.process_telegram(identifier,received_telegram,data)
                 else:
                     raise error('Client disconnected')
-            except blabla:
+            except:
                 client.close()
                 self.logger.log('Client '+str(address)+' disconnected')
                 if not self.termination_in_progress:
