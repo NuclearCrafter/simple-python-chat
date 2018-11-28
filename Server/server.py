@@ -105,13 +105,13 @@ class chat_server(metaclass = singleton):
             password = args[2]
             if self.user_manager.user_exists(username):
                 if self.user_manager.validate_user(username,password):
-                    self.client_manager[identifier].bind_username(username)
+                    self.client_manager.bind_identifier(identifier,username)
                     self.send_data_to_user(identifier,self.tg_generator.generate_login_status(True))
             else:
                 self.user_manager.add_user(username)
                 self.send_data_to_user(identifier,'CREATING NEW USER')
                 self.user_manager.set_user_password(username,password)
-                self.client_manager[identifier].bind_username(username)
+                self.client_manager.bind_identifier(identifier,username)
                 self.send_data_to_user(identifier,self.tg_generator.generate_login_status(True))
         elif args[0]=='status':
             status = self.client_manager[identifier]._user == 'GUEST'
@@ -127,10 +127,14 @@ class chat_server(metaclass = singleton):
         elif message_type == 'group':
             pass
         elif message_type == 'private':
-            data_to_send = self.tg_generator.generate_message_string(message_types.private,
-                                                        received_telegram.message,
-                                                        self.client_manager[identifier]._user)
-            self.send_data_to_user(self.client_manager.get_id_by_username(received_telegram.arguments[1]),data_to_send)
+            adresate = received_telegram.arguments[1]
+            if self.client_manager.lookup_user(adresate):
+                data_to_send = self.tg_generator.generate_message_string(message_types.private,
+                                                            received_telegram.message,
+                                                            self.client_manager[identifier]._user)
+                self.send_data_to_user(self.client_manager.get_id_by_username(received_telegram.arguments[1]),data_to_send)
+            else:
+                self.send_data_to_user(identifier,'INVALID USER FOR PRIVATE MESSAGING')
     def listen_to_client(self, identifier):
         size = 1024
         client = self.client_manager[identifier]._conn

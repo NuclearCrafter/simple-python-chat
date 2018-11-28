@@ -28,6 +28,8 @@ class client_manager():
     def terminate_all_connections(self):
         for identifier in self._client_list:
             self._client_list[identifier]._conn.close()
+    def lookup_user(self,username):
+        return username in self._username_table
     def __getitem__(self, position):
         return self.get_user(position)
     def __iter__(self):
